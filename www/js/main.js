@@ -81,6 +81,7 @@
         this.songs_hierarchy = songs_hierarchy;
         this.currentSong = window.location.hash;
         this.currentTrack = 1;
+        this.songsByAuthors = this.getFileByAuthors();
 
         this.createPlaylistDisplay();
 
@@ -180,29 +181,60 @@
             return false;
           });
         },
+        getFileByAuthors: function() {
+          var songs_hierarchy = this.songs_hierarchy;
+          var paths = Object.keys(songs_hierarchy);
+          var authors = {};
+
+          paths.forEach(function(path) {
+            var authorMatch = path.match(/\/([^\/]+)/);
+            if (authorMatch) {
+              var author = authorMatch[1];
+              if (!authors[author]) {
+                authors[author] = [];
+              }
+
+              songs_hierarchy[path].files.forEach(function(file) {
+                authors[author].push(path + '/' + file);
+              });
+            }
+          });
+
+          return authors;
+        },
         browseDirectoryStructure: function(root, walking_directory, deepId) {
           var self = this;
+          var files, directories;
+          var filesByAuthor = this.songsByAuthors[walking_directory];
           var itemId = "item-" + deepId
-          var markup = '<li><input type="checkbox" id="' + itemId + '" /><label for="' + itemId + '">' + walking_directory + '</label>';
+          var markup = '<li><input type="checkbox" id="' + itemId + '" ' + (root === '' ? 'checked' : '') + '/><label for="' + itemId + '">' + walking_directory;
 
+          if (filesByAuthor) {
+            markup += ' (' + filesByAuthor.length + ')';
+          }
+
+          markup += '</label>';
           markup += '<ul>';
 
           if (root !== '') {
             walking_directory = root + '/' + walking_directory;
           }
 
-          this.songs_hierarchy[walking_directory]['directories'].forEach(function(directory, i) {
+          directories = this.songs_hierarchy[walking_directory]['directories'];
+          directories.forEach(function(directory, i) {
             markup += self.browseDirectoryStructure(walking_directory, directory, deepId + '-' + i);
           });
 
-          if (this.songs_hierarchy[walking_directory]['files'].length > 0) {
-            this.songs_hierarchy[walking_directory]['files'].forEach(function(file) {
+          files = this.songs_hierarchy[walking_directory]['files'];
+          if (files.length > 0) {
+            files.forEach(function(file) {
               var link = walking_directory + '/' + file;
               markup += '<li class="song-selector" data-track="' + link + '"><a class="song" href="#' + link + '">' + file + '</a></li>';
             });
           }
 
           markup += '</ul>';
+
           markup += '</li>'
           return markup;
         },
